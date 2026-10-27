@@ -1,0 +1,136 @@
+---
+title: "CLI Reference"
+description: "Every flag of oellm-eval schedule and oellm-eval collect."
+---
+
+```text
+oellm-eval schedule [options]    # plan, download and submit evaluations
+oellm-eval collect  [options]    # gather results into a CSV
+```
+
+<Note>
+Boolean flags take a value (`--dry_run true`), and flag names use underscores (`--task_groups`).
+</Note>
+
+## `oellm-eval schedule`
+
+### What to evaluate
+
+<ParamField path="--models" type="string">
+  Comma-separated Hub repo ids and/or local paths. A folder of checkpoints is expanded into one model per checkpoint. Revisions (`repo,revision=x`) aren't supported; see [Hub revisions](/guides/running-evaluations#hub-revisions).
+</ParamField>
+
+<ParamField path="--task_groups" type="string">
+  Comma-separated task groups, each optionally filtered by language: `"multilingual-oellm-eu[deu_Latn|fra_Latn],dclm-core-22"`.
+</ParamField>
+
+<ParamField path="--tasks" type="string">
+  Comma-separated task names, instead of `--task_groups`. Requires `--n_shot`.
+</ParamField>
+
+<ParamField path="--n_shot" type="int | list[int]">
+  Shot count(s) for `--tasks`: `--n_shot 5` or `--n_shot "[0, 5]"`.
+</ParamField>
+
+<ParamField path="--eval_csv_path" type="string">
+  CSV with `model_path`, `task_path`, `n_shot` and optional `eval_suite`. Can't be combined with the four options above.
+</ParamField>
+
+### Where it runs
+
+<ParamField path="--venv_path" type="string">
+  Run the harnesses from this venv instead of the container. Required on LUMI and for `--local`.
+</ParamField>
+
+<ParamField path="--local" type="bool" default="false">
+  Run sequentially on this machine instead of submitting to SLURM. Output goes to `./oellm-output/`.
+</ParamField>
+
+<ParamField path="--slurm_template_var" type="JSON">
+  Override `PARTITION`, `ACCOUNT`, `TIME`, `SLURM_MEM`, `GPUS_PER_NODE` or `NODES`: `'{"TIME":"11:59:00"}'`.
+</ParamField>
+
+<ParamField path="--max_array_len" default="128" type="int">
+  Maximum number of array jobs running at once.
+</ParamField>
+
+<ParamField path="--tasks_per_job" default="8" type="int">
+  Maximum lm-eval tasks per model load. A crash fails the whole batch; `1` isolates every task.
+</ParamField>
+
+<ParamField path="--nodelist" type="string">
+  Pin jobs to specific nodes.
+</ParamField>
+
+<ParamField path="--lm_eval_include_path" type="string">
+  Folder of custom lm-eval task YAMLs. Defaults to the tasks bundled with oellm-eval.
+</ParamField>
+
+### Testing
+
+<ParamField path="--dry_run" default="false" type="bool">
+  Write `jobs.csv` and the SLURM script without submitting.
+</ParamField>
+
+<ParamField path="--skip_checks" default="false" type="bool">
+  Skip model and dataset downloads and the runtime check. Fast, but jobs fail if anything isn't cached.
+</ParamField>
+
+<ParamField path="--limit" type="int">
+  Evaluate only this many examples per task. For smoke tests only.
+</ParamField>
+
+<ParamField path="--download_only" default="false" type="bool">
+  Download models and datasets, then stop.
+</ParamField>
+
+<ParamField path="--verbose" default="false" type="bool">
+  Show debug output, including third-party logs.
+</ParamField>
+
+<ParamField path="--trust_remote_code" default="true" type="bool">
+  Allow dataset loading scripts during download.
+</ParamField>
+
+### Config files
+
+<ParamField path="--config" type="path">
+  Read options from a YAML file. Later command-line flags override it.
+</ParamField>
+
+<ParamField path="--print_config" type="flag">
+  Print the resolved options as YAML and exit.
+</ParamField>
+
+```yaml my-eval.yaml
+models: /scratch/me/models/my-model
+task_groups: multilingual-oellm-eu
+venv_path: /scratch/project_465002530/venvs/oellm-eval-rocm
+slurm_template_var: '{"TIME": "11:59:00"}'
+```
+
+```bash
+oellm-eval schedule --config my-eval.yaml
+```
+
+## `oellm-eval collect`
+
+<ParamField path="--results_dir" type="string" required>
+  Folder to search recursively for results and `jobs.csv` files.
+</ParamField>
+
+<ParamField path="--output_csv" type="string" default="eval_results.csv">
+  Output file. With `--check`, missing evaluations go to `<name>_missing.csv`.
+</ParamField>
+
+<ParamField path="--check" type="bool" default="false">
+  Compare results with `jobs.csv` and write the missing evaluations.
+</ParamField>
+
+<ParamField path="--fetch_all_metrics" type="bool" default="false">
+  Keep every metric instead of only the primary one.
+</ParamField>
+
+<ParamField path="--verbose" type="bool" default="false">
+  Print a summary of models, tasks and missing jobs.
+</ParamField>

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "oellm-eval",
+  "colors": {
+    "primary": "#16A34A",
+    "light": "#07C983",
+    "dark": "#15803D"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/OpenEuroLLM/oellm-eval"
+        }
+      ]
+    },
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "index",
+          "quickstart",
+          "installation"
+        ]
+      },
+      {
+        "group": "Guides",
+        "pages": [
+          "guides/running-evaluations",
+          "guides/cluster-scheduling",
+          "guides/results",
+          "troubleshooting"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/cli",
+          "reference/task-groups",
+          "reference/configuration"
+        ]
+      },
+      {
+        "group": "Contributing",
+        "pages": [
+          "contributing/add-a-benchmark",
+          "contributing/add-a-cluster"
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "href": "https://github.com/OpenEuroLLM/oellm-eval/issues",
+        "label": "Issues"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/OpenEuroLLM/oellm-eval"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/OpenEuroLLM/oellm-eval",
+      "website": "https://openeurollm.eu"
+    }
+  },
+  "description": "OpenEuroLLM evaluation CLI: schedule and collect LLM evaluations on HPC clusters with SLURM."
+}

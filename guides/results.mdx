@@ -1,0 +1,84 @@
+---
+title: "Results"
+description: "Collect scores into a CSV, follow a run, and re-run what failed."
+---
+
+## Collect
+
+```bash
+oellm-eval collect --results_dir <run directory> --output_csv results.csv
+```
+
+| model_name | task | n_shot | metric_name | performance |
+|---|---|---|---|---|
+| EleutherAI/pythia-160m | hellaswag | 10 | acc_norm | … |
+| EleutherAI/pythia-160m | sib200_deu_Latn | 0 | acc_norm | … |
+| EleutherAI/pythia-160m | flores200:deu_Latn-eng_Latn | 4 | chrf++ | … |
+
+- Each task keeps its **primary metric** (listed in [Task Groups](/reference/task-groups)). Add `--fetch_all_metrics true` to keep every metric, including standard errors.
+- Grouped benchmarks report their aggregate (`mmlu`, `global_mmlu_full_de`), not each subtask.
+- Accuracies are 0–1; BLEU and chrF++ are 0–100.
+
+`--results_dir` is searched recursively, so you can point it at a folder holding many runs and get one CSV.
+
+## Follow a run
+
+```bash
+squeue --me                                        # queued and running jobs
+sacct -j <jobid> -X --format=JobID,State,Elapsed   # finished jobs
+scancel <jobid>                                    # cancel a run
+```
+
+Each array job writes `slurm_logs/oellm-eval-<jobid>-<index>.out` (what it ran) and `.err` (harness output and tracebacks). List every failure:
+
+```bash
+grep -h '\[error\]' <run directory>/slurm_logs/*.out | sort | uniq -c
+```
+
+A job shows `FAILED` if **any** of its evaluations failed; the others may have succeeded. `TIMEOUT` means the evaluations after that point never ran.
+
+## Re-run what failed
+
+<Steps>
+  <Step title="Find what's missing">
+    ```bash
+    oellm-eval collect --results_dir <run directory> --output_csv results.csv --check true
+    ```
+
+    Evaluations without a result are written to `results_missing.csv`.
+  </Step>
+  <Step title="Fix the cause">
+    Check the `[error]` lines and [Troubleshooting](/troubleshooting). Re-submitting without a fix usually fails the same way.
+  </Step>
+  <Step title="Re-submit">
+    ```bash
+    oellm-eval schedule --eval_csv_path results_missing.csv --venv_path <same venv>
+    ```
+
+    Add `--slurm_template_var '{"TIME":"11:59:00"}'` if jobs timed out.
+  </Step>
+  <Step title="Collect everything">
+    The re-run gets its own folder. Collect from the parent folder to merge both runs:
+
+    ```bash
+    oellm-eval collect --results_dir <parent folder> --output_csv results.csv --check true
+    ```
+  </Step>
+</Steps>
+
+## Leaderboard
+
+Pivot the CSV into a _model × task_ table:
+
+```bash
+curl -sO https://raw.githubusercontent.com/OpenEuroLLM/oellm-eval/main/scripts/pivot_results.py
+uv run --with pandas pivot_results.py results.csv -o leaderboard.csv
+```
+
+Or in pandas:
+
+```python
+import pandas as pd
+df = pd.read_csv("results.csv")
+table = df.pivot_table(index="model_name", columns="task", values="performance")
+```

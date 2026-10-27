@@ -1,0 +1,129 @@
+---
+title: "Running Evaluations"
+description: "Choose models and benchmarks: Hub models, checkpoints, task groups, languages and individual tasks."
+---
+
+Every run is `oellm-eval schedule` with **what to evaluate** (`--models`) and **what to run** (`--task_groups` or `--tasks`).
+
+```bash
+oellm-eval schedule --models "my-org/my-model" --task_groups "multilingual-oellm-eu"
+```
+
+## Models
+
+`--models` takes a comma-separated list of Hugging Face repo ids and/or local paths.
+
+```bash
+--models "EleutherAI/pythia-160m"                            # Hub model
+--models "EleutherAI/pythia-160m,HuggingFaceTB/SmolLM2-135M"  # several
+--models "/scratch/me/models/my-model"                       # local folder
+```
+
+- **Hub models** are downloaded into `$HF_HOME/hub` before the job is submitted. Set `HF_TOKEN` for private or gated models.
+- **Local models** must be in Hugging Face format (`config.json`, tokenizer, `*.safetensors`) on a filesystem the GPU nodes can read. Convert training-framework checkpoints first.
+- In results, a model is named exactly as you passed it, so give local folders meaningful names.
+
+### Whole training runs
+
+Pass a parent folder and every checkpoint inside it is evaluated:
+
+| Layout | Evaluated |
+|---|---|
+| `run/*.safetensors` | `run` itself |
+| `run/hf/<ckpt>/*.safetensors` | every checkpoint under `hf/` |
+| `run/<model>/*.safetensors` | every sub-folder with weights |
+| `run/<model>/hf/<ckpt>/*.safetensors` | every checkpoint under each `hf/` |
+
+### Hub revisions
+
+To evaluate branches of a Hub repo (for example one branch per training step), download each revision and link it into a folder, then pass the folder:
+
+```bash
+REPO=my-org/my-model
+MODELS=/scratch/me/models/my-model
+mkdir -p "$MODELS"
+
+for REV in step-1000 step-2000 step-3000; do
+  SNAP=$(uv run --with huggingface_hub python -c \
+    "from huggingface_hub import snapshot_download; print(snapshot_download('$REPO', revision='$REV'))")
+  ln -sfn "$SNAP" "$MODELS/$REV"
+done
+
+oellm-eval schedule --models "$MODELS" --task_groups "dclm-core-22"
+```
+
+<Warning>
+Don't write `repo,revision=x` in `--models` or a CSV. Both are split on commas, so the revision is lost.
+</Warning>
+
+## Benchmarks
+
+### Task groups
+
+A task group is a named set of tasks with their shot counts. Use one or more:
+
+```bash
+--task_groups "dclm-core-22"
+--task_groups "dclm-core-22,multilingual-oellm-eu"
+```
+
+| Goal | Group | Evaluations |
+|---|---|---|
+| Full multilingual suite | `multilingual-oellm-eu` | 401 |
+| English core (DCLM) | `dclm-core-22` | 22 |
+| Quick English check | `open-sci-0.01` | 12 |
+| Reasoning, math, code | `reasoning` | 10 |
+
+See [Task Groups](/reference/task-groups) for all of them.
+
+<Note>
+If two groups contain the same task, it runs once with the settings of the group listed **first**. Put the group whose settings matter first (e.g. `dclm-core-22,open-sci-0.01`).
+</Note>
+
+### Languages
+
+Add `[code]` after a group to keep only that language:
+
+```bash
+--task_groups "multilingual-oellm-eu[deu_Latn]"               # German only
+--task_groups "sib200-eu[fra_Latn|deu_Latn]"                   # two languages
+--task_groups "sib200-eu[fra_Latn],flores-200-eu-to-eng[deu_Latn]"
+--task_groups "all[ita_Latn]"                                  # every group, Italian
+```
+
+Codes are `lang_Script` (`deu_Latn`, `ukr_Cyrl`); short forms like `de` are rejected. A bracket that matches nothing in its group is an error. The [language table](/reference/task-groups#languages) lists all codes.
+
+### Individual tasks
+
+```bash
+--tasks "hellaswag,arc_easy" --n_shot 0
+--tasks "hellaswag" --n_shot "[0, 5, 10]"
+```
+
+Tasks outside the registry run on lm-eval-harness, and their datasets aren't pre-downloaded, so make sure they're already in `$HF_HOME`.
+
+### CSV
+
+For full control, list every evaluation in a CSV (`model_path`, `task_path`, `n_shot`, optional `eval_suite`):
+
+```bash
+oellm-eval schedule --eval_csv_path evals.csv
+```
+
+## Test before a full run
+
+```bash
+# Write jobs.csv and the SLURM script, submit nothing, download nothing
+oellm-eval schedule --models "$MODEL" --task_groups "dclm-core-22" --dry_run true --skip_checks true
+
+# Real run with 8 examples per task
+oellm-eval schedule --models "$MODEL" --task_groups "dclm-core-22" --limit 8
+```
+
+## GPU memory
+
+Each evaluation loads the model on one GPU; more GPUs per job don't split it. lm-eval picks its batch size automatically; lighteval uses 32. If lighteval runs out of memory:
+
+```bash
+BATCH_SIZE=8 oellm-eval schedule --models "$MODEL" --task_groups "flores-200-eu-to-eng"
+```

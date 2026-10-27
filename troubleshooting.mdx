@@ -1,0 +1,94 @@
+---
+title: "Troubleshooting"
+description: "Common errors and how to fix them."
+---
+
+List the failures in a run first:
+
+```bash
+grep -h '\[error\]' <run directory>/slurm_logs/*.out | sort | uniq -c
+```
+
+## Scheduling
+
+<AccordionGroup>
+  <Accordion title="HF_HOME is not set">
+    Export a shared cache folder, e.g. `export HF_HOME=/scratch/project_465002530/cache` on LUMI.
+  </Accordion>
+  <Accordion title="No cluster found for hostname">
+    This machine isn't a known cluster. Use `--local true`, or [add the cluster](/contributing/add-a-cluster).
+  </Accordion>
+  <Accordion title="Unknown language code(s): de (use deu_Latn)">
+    Use the full `lang_Script` code shown in the message. All codes: [Task Groups](/reference/task-groups#languages).
+  </Accordion>
+  <Accordion title="No tasks in task group … match language(s)">
+    That group doesn't cover the language (e.g. FLORES-EU has no Ukrainian). Check the group's languages in [Task Groups](/reference/task-groups).
+  </Accordion>
+  <Accordion title="Unknown task group(s)">
+    Typo, or an old CLI. Run `uv tool upgrade oellm-eval`.
+  </Accordion>
+  <Accordion title="No valid Python virtual environment found">
+    `--venv_path` must be the venv folder itself, the one containing `bin/python`.
+  </Accordion>
+  <Accordion title="No remaining queue capacity">
+    You're at the cluster's queue limit. Wait for jobs to finish or `scancel` some.
+  </Accordion>
+  <Accordion title="Scheduling is silent for several minutes">
+    It's downloading datasets. The first multilingual run takes a while; later runs reuse the cache.
+  </Accordion>
+  <Accordion title="401/403 or rate-limit errors">
+    Export `HF_TOKEN`, accept the terms of the gated datasets (FLORES, OpenSubtitles), and join the [OpenEuroLLM organisation](https://huggingface.co/OpenEuroLLM).
+  </Accordion>
+</AccordionGroup>
+
+## Jobs
+
+<AccordionGroup>
+  <Accordion title="(lighteval) exited with status 127">
+    `lighteval` isn't in your venv's `bin/`. Reinstall it with `UV_TOOL_BIN_DIR=$VENV/bin` ([Installation](/installation#build-a-venv)).
+  </Accordion>
+  <Accordion title="Couldn't reach '…' on the Hub (OfflineModeIsEnabled)">
+    The task needs a dataset that wasn't downloaded before the job. Download it once on the login node, then re-run the missing evaluations:
+    ```bash
+    uv run --with datasets python -c "from datasets import load_dataset; load_dataset('<repo>', '<config>')"
+    ```
+    If it's part of a task group, please [open an issue](https://github.com/OpenEuroLLM/oellm-eval/issues).
+  </Accordion>
+  <Accordion title="Tasks not found: …">
+    The harness doesn't know that task name. Check it with `lm-eval ls tasks`.
+  </Accordion>
+  <Accordion title="exited 0 but wrote no result">
+    The harness produced nothing: usually a container that didn't start or a venv missing the harness. See the `.err` file.
+  </Accordion>
+  <Accordion title="lighteval runs on CPU / jobs time out on LUMI">
+    torch can't see the AMD GPUs. Use a ROCm venv with `--venv_path`, not the container.
+  </Accordion>
+  <Accordion title="Strings must be encoded before hashing">
+    Reinstall lighteval with `--with "xxhash<4"`.
+  </Accordion>
+  <Accordion title="Out of memory">
+    GPU: lower lighteval's `BATCH_SIZE`. Host (`OUT_OF_MEMORY` state): raise `SLURM_MEM` via `--slurm_template_var`.
+  </Accordion>
+  <Accordion title="TIMEOUT">
+    Give each job more time: `--slurm_template_var '{"TIME":"11:59:00"}'`, then re-run the missing evaluations.
+  </Accordion>
+  <Accordion title="A job seems stuck at startup">
+    Loading task registries and weights from a network filesystem can take 10–15 minutes. Wait before cancelling.
+  </Accordion>
+</AccordionGroup>
+
+## Results
+
+<AccordionGroup>
+  <Accordion title="A task is missing from results.csv">
+    Run `collect --check true`. If it's in `*_missing.csv`, it failed; check the logs.
+  </Accordion>
+  <Accordion title="A task has several metrics">
+    Its group declares no primary metric. Filter `metric_name` yourself.
+  </Accordion>
+  <Accordion title="A shot setting I expected is missing">
+    Two requested groups share the task, and the first group's settings were used. Reorder the groups.
+  </Accordion>
+</AccordionGroup>
+
+Still stuck? [Open an issue](https://github.com/OpenEuroLLM/oellm-eval/issues) with your command and the relevant log lines.

@@ -1,0 +1,63 @@
+---
+title: "Add a Cluster"
+description: "Support a new HPC cluster, and set up the repository for development."
+---
+
+## Development setup
+
+```bash
+git clone https://github.com/OpenEuroLLM/oellm-eval.git && cd oellm-eval
+uv sync --extra dev --extra eval-base
+```
+
+| Path | Contents |
+| --- | --- |
+| `oellm/main.py` | The `schedule` and `collect` commands |
+| `oellm/task_groups.py` | Task-group parsing and language filters |
+| `oellm/utils.py` | Cluster detection, downloads, checkpoint discovery |
+| `oellm/resources/` | `task-groups.yaml`, `clusters.yaml`, the SLURM template, custom lm-eval tasks |
+| `containers/` | Apptainer definitions, one per cluster |
+
+Checks CI runs on every push:
+
+```bash
+uvx ruff format --check . && uvx ruff check .
+uvx yamllint .
+uv run pytest tests/ --ignore=tests/integration/
+```
+
+## Add the cluster preset
+
+Add an entry to `oellm/resources/clusters.yaml`:
+
+```yaml
+mycluster:
+  hostname_pattern: ["login*.mycluster.eu", "gpu*"]   # login and compute nodes
+  EVAL_BASE_DIR: "/shared/project/oellm-shared-evals"
+  PARTITION: "gpu"
+  ACCOUNT: "my-project"            # omit if not needed
+  QUEUE_LIMIT: 200
+  EVAL_CONTAINER_IMAGE: "eval_env-mycluster.sif"
+  SINGULARITY_ARGS: "--nv"         # --rocm for AMD
+```
+
+Naming the entry after SLURM's `ClusterName` (`scontrol show config | grep ClusterName`) makes detection reliable. `EVAL_BASE_DIR` must be shared and writable by the whole project.
+
+Test it without submitting:
+
+```bash
+uv run oellm-eval schedule --models EleutherAI/pythia-160m --task_groups open-sci-0.01 \
+    --venv_path /some/venv --dry_run true --skip_checks true
+```
+
+## Build a container (optional)
+
+Users can always run with `--venv_path`, but a container makes the default path work.
+
+1. Create `containers/mycluster.def`, copying an existing one. Use `nvcr.io/nvidia/pytorch` for NVIDIA or `rocm/pytorch` for AMD. On AMD, install lighteval with `--torch-backend rocm6.4`, as `containers/lumi.def` does.
+2. Add the image to the matrix in `.github/workflows/build-and-push-apptainer.yml`.
+3. Run that workflow from the repository's [Actions](https://github.com/OpenEuroLLM/oellm-eval/actions/workflows/build-and-push-apptainer.yml) tab. It uploads the image to Hugging Face.
+
+<Note>
+  Images are rebuilt only when the workflow is run manually, so trigger it after changing a `.def` file.
+</Note>

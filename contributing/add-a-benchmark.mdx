@@ -1,0 +1,129 @@
+---
+title: "Add a Benchmark"
+description: "Add a new evaluation: reuse a built-in task or write a custom one, register it, test it and validate the score."
+---
+
+A benchmark is done when it's **registered in `task-groups.yaml`**, **limited to the European-language subset**, **filterable by language**, **passes the tests**, and its **score matches the upstream implementation**. Work through the steps in order.
+
+<Steps>
+  <Step title="Branch">
+    ```bash
+    git clone https://github.com/OpenEuroLLM/oellm-eval.git && cd oellm-eval
+    git switch -c add-<benchmark>
+    uv sync --extra dev --extra eval     # eval brings torch, for the local smoke test
+    ```
+  </Step>
+  <Step title="Check whether a harness already has it">
+    oellm-eval runs lm-evaluation-harness and lighteval, so first look for an existing task: `lm-eval ls tasks`, lm-eval's [`tasks/`](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/lm_eval/tasks) folder, and lighteval's multilingual task list.
+
+    - **It exists:** reference it by name in `task-groups.yaml` and write no task files. Most groups work this way (`mmlu`, `hellaswag`, `belebele_*`, `flores200:*`).
+    - **It doesn't exist, or is broken:** write a custom lm-eval task (step 4).
+
+    Either way, note how the benchmark is **meant** to be scored (prompt, shots, split, answer extraction, metric) and find a published number for at least one model. You'll need it in step 7.
+  </Step>
+  <Step title="Keep only the European languages">
+    Scope the benchmark to the OpenEuroLLM languages: the 24 official EU languages plus Catalan, Basque, Galician, Albanian, Bosnian, Georgian, Macedonian, Serbian, Turkish, Ukrainian, Icelandic and Norwegian. Copy `valid_langs` from a comparable group such as `sib200-eu`, and intersect it with what the dataset actually has. A language listed but missing upstream fails at run time.
+  </Step>
+  <Step title="Write a custom task (only if needed)">
+    Create `oellm/resources/custom_lm_eval_tasks/<name>/`. Everything in `custom_lm_eval_tasks/` is passed to lm-eval as `--include_path` automatically.
+
+    ```text
+    custom_lm_eval_tasks/<name>/
+    ├── _default_template_yaml     # shared: dataset_path, output_type, doc_to_text, doc_to_choice/target, metrics
+    ├── <name>_deu_Latn.yaml       # per language: include the template, set task, dataset_name, test_split
+    ├── <name>_fra_Latn.yaml
+    └── utils.py                   # only for non-trivial prompts or scoring
+    ```
+
+    Good models to copy:
+
+    | Example | Use it for |
+    |---|---|
+    | [`sib200/`](https://github.com/OpenEuroLLM/oellm-eval/tree/main/oellm/resources/custom_lm_eval_tasks/sib200) | Multiple-choice, one YAML per language |
+    | [`polymath/`](https://github.com/OpenEuroLLM/oellm-eval/tree/main/oellm/resources/custom_lm_eval_tasks/polymath) | Generative tasks with an official scorer vendored verbatim |
+    | [`global_piqa/`](https://github.com/OpenEuroLLM/oellm-eval/tree/main/oellm/resources/custom_lm_eval_tasks/global_piqa) | Two formulations (completion vs prompted) of one dataset |
+
+    If scoring is non-trivial, vendor the upstream scorer unchanged in a sibling file and load it by path, as `polymath/utils.py` does. Cite the upstream URL in its docstring.
+  </Step>
+  <Step title="Register it in task-groups.yaml">
+    Add a group to `oellm/resources/task-groups.yaml`. Prefer the `{lang}` template:
+
+    ```yaml
+    task_groups:
+      mybench-eu:
+        description: "MyBench EU-language QA (0-shot, acc_norm)."
+        suite: lm-eval-harness       # or lighteval
+        metric: acc_norm             # primary metric reported by collect
+        n_shots: [0]
+        dataset: my-org/mybench      # required: drives pre-download and CI checks
+        valid_langs: [deu_Latn, fra_Latn, ita_Latn, spa_Latn]
+        tasks:
+          - task: "mybench_{lang}"
+            subset: "{lang}"
+    ```
+
+    | Field | Level | Required | Meaning |
+    |---|---|---|---|
+    | `description` | group | yes | One line; keep YAML lines under 80 characters |
+    | `suite` | group or task | yes | `lm-eval-harness`, `lighteval` or `evalchemy` |
+    | `n_shots` | group or task | yes | List of shot counts |
+    | `dataset` | group or task | yes | HF dataset repo, pre-downloaded before jobs run |
+    | `metric` | group or task | recommended | Primary metric for `collect`. Without it, all metrics are kept. |
+    | `valid_langs` | group | for templates | Values substituted for `{lang}` |
+    | `task` | task | yes | Task name in the harness |
+    | `subset` | task | if the dataset has configs | HF config name; also used to derive the language |
+
+    To include the group in the main suite, add it to `super_groups.multilingual-oellm-eu.task_groups`.
+
+    <Warning>
+    `dataset` must be the dataset the task **actually loads**. The job runs offline, so if the task reads a different repo than the one declared, it fails with `OfflineModeIsEnabled`.
+    </Warning>
+  </Step>
+  <Step title="Make it language-filterable">
+    Every task in a multilingual group must resolve to a canonical `lang_Script` code, or `group[lang]` filtering and the CI guard break.
+
+    - **`{lang}` templates** resolve automatically, as long as the values are canonical codes or known spellings.
+    - **A new spelling** (for example `DE_DE` or `german`) needs an entry in `_LANG_ALIAS` in `oellm/task_groups.py`.
+    - **Explicitly listed tasks** (no template) must also be added to `EXPLICIT_MULTILINGUAL_GROUPS` in `tests/test_language_groups.py`, or the guard silently skips them.
+
+    ```bash
+    uv run python -c "from oellm.task_groups import _expand_task_groups as e; \
+      print(sorted(j.task for j in e(['mybench-eu']))); \
+      print([j.task for j in e(['mybench-eu[deu_Latn]'])])"
+    ```
+  </Step>
+  <Step title="Test it">
+    A small local run proves the task loads, prompts and scores:
+
+    ```bash
+    uv run oellm-eval schedule --models "EleutherAI/pythia-160m" --task_groups "mybench-eu" \
+        --venv_path .venv --local true --limit 16
+    uv run oellm-eval collect --results_dir oellm-output
+    ```
+
+    Then the checks CI runs:
+
+    ```bash
+    uv run pytest tests/test_language_groups.py tests/test_task_groups.py -q
+    uv run pytest tests/test_datasets.py -q -k mybench   # datasets reachable
+    uvx ruff format --check . && uvx ruff check .
+    uvx yamllint .
+    ```
+  </Step>
+  <Step title="Validate the score">
+    Run the full group on a real model and compare with the upstream number for the same model, shots and split.
+
+    - Within about one standard error: reproduced.
+    - Off by more than a couple of points: the prompt, shots, split or scorer differs. Find the difference; don't adjust the number.
+    - No published number: record your measurement as the initial baseline and say so in the PR.
+  </Step>
+  <Step title="Open a pull request">
+    ```bash
+    git add oellm/resources/task-groups.yaml oellm/resources/custom_lm_eval_tasks/<name>
+    git commit -m "feat: add MyBench (EU languages) for lm-eval-harness"
+    git push -u origin add-<benchmark>
+    ```
+
+    Keep the description short: what you added, which upstream implementation you followed, and your validation number against the upstream one.
+  </Step>
+</Steps>

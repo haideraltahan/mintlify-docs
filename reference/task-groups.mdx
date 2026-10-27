@@ -1,0 +1,91 @@
+---
+title: "Task Groups"
+description: "Every task group: what it measures, harness, shots, primary metric, size and languages."
+---
+
+Task groups are defined in [`task-groups.yaml`](https://github.com/OpenEuroLLM/oellm-eval/blob/main/oellm/resources/task-groups.yaml). **Evals** is the number of evaluations per model; **Metric** is what `collect` reports (_all_ = every metric is kept).
+
+## Super groups
+
+| Name | Contains | Evals |
+| --- | --- | --- |
+| `multilingual-oellm-eu` | Every multilingual benchmark in the 36 OpenEuroLLM languages (groups marked ★) | 401 |
+| `oellm-multilingual` | FLORES (both directions), Belebele 5-shot, Global-MMLU, MGSM, generic-multilingual, INCLUDE, MultiBLIMP, XCOPA | 173 |
+| `all` | Every group; use it with a language filter, e.g. `all[deu_Latn]` | – |
+
+## Multilingual groups
+
+| Group | Measures | Harness | Shots | Metric | Evals |
+| --- | --- | --- | --- | --- | --- |
+| `arc-challenge-mt-eu` ★ | ARC-Challenge science QA (translated) | lm-eval | 0 | acc_norm | 22 |
+| `belebele-eu-5-shot` ★ | Belebele reading comprehension | lm-eval | 5 | all | 24 |
+| `belebele-eu-cf` | Belebele, cloze formulation | lighteval | 0 | acc_norm | 26 |
+| `flores-200-eng-to-eu` ★ | Translation English → language | lighteval | 4 | chrf++ | 35 |
+| `flores-200-eu-to-eng` ★ | Translation language → English | lighteval | 4 | chrf++ | 35 |
+| `global-mgsm-eu` ★ | Grade-school math | lm-eval | 0 | exact_match | 11 |
+| `global-mmlu-eu` ★ | Global-MMLU knowledge | lm-eval | 5 | all | 16 |
+| `global-piqa-eu-completions` ★ | Physical commonsense (completion) | lm-eval | 0 | acc_norm | 32 |
+| `global-piqa-eu-prompted` ★ | Physical commonsense (prompted) | lm-eval | 0 | exact_match | 32 |
+| `hellaswag-eu` ★ | HellaSwag commonsense (translated) | lm-eval | 0 | acc_norm | 16 |
+| `include` ★ | INCLUDE regional knowledge exams | lm-eval | 0 | all | 21 |
+| `mgsm-eu` ★ | MGSM math, native chain-of-thought | lm-eval | 5 | all | 4 |
+| `mmlu-prox-eu` | MMLU-ProX, chain-of-thought | lm-eval | 5 | exact_match | 10 |
+| `mmmlu-eu` | Human-translated MMLU | lm-eval | 5 | acc | 5 |
+| `multiblimp-eu` ★ | Grammaticality judgements | lm-eval | 0 | acc_norm | 32 |
+| `opensubtitles-eu-en-xx` ★ | Subtitle translation English → language | lm-eval | 0 | bleu | 25 |
+| `opensubtitles-eu-xx-en` ★ | Subtitle translation language → English | lm-eval | 0 | bleu | 25 |
+| `pawsx-eu` | Paraphrase detection | lm-eval | 0 | acc | 4 |
+| `polymath-eu-low` / `-medium` / `-high` / `-top` ★ | Math by difficulty tier | lm-eval | 0 | exact_match | 6 each |
+| `sib200-eu` ★ | Topic classification | lm-eval | 0 | acc_norm | 36 |
+| `xcopa-eu` ★ | Causal commonsense | lighteval | 0 | acc | 3 |
+| `xcsqa-eu` ★ | Commonsense QA | lm-eval | 0 | acc_norm | 8 |
+| `xnli-eu` | Natural language inference | lm-eval | 0 | acc | 6 |
+| `generic-multilingual` | XWinograd, XCOPA, XStoryCloze (all their languages) | lm-eval | 0 | all | 3 |
+
+FLORES and OpenSubtitles are gated on Hugging Face: accept their terms once before running.
+
+## English groups
+
+**`dclm-core-22`** (22 evals, default metric `acc`). Needs a [special environment](/installation#special-environments) outside LUMI.
+
+| Shots | Tasks |
+| --- | --- |
+| 0 | `copa`, `openbookqa`_, `hellaswag`_, `winogrande`, `wsc273`, `lambada_openai`, `coqa` (f1) |
+| 3 | `agieval_lsat_ar` |
+| 10 | `arc_easy`_, `arc_challenge`_, `boolq`, `commonsense_qa`, `hellaswag`_, `piqa`_, `bigbench_language_identification_multiple_choice`, `squadv2` (f1), `jeopardy` (exact_match), 5 BIG-bench `*_generate_until` tasks (exact_match) |
+
+\* scored with `acc_norm`.
+
+**`open-sci-0.01`** (12 evals): `copa`, `social_iqa`, `openbookqa`, `lambada_openai`, `winogrande` (0-shot); `mmlu` (5-shot); `hellaswag`, `arc_easy`, `arc_challenge`, `commonsense_qa`, `piqa`, `boolq` (10-shot).
+
+## Reasoning
+
+**`reasoning`** (10 evals, all metrics kept). GSM8K (4-shot), IFEval (0) and MBPP (3) run on lm-eval; GPQA-Diamond, MATH500, LiveCodeBench, HumanEval, AIME24, AIME25 and AMC23 (0-shot) run on evalchemy. Needs a [special environment](/installation#special-environments).
+
+## Languages
+
+Filter any group with `group[code]`. Codes are `<ISO 639-3>_<Script>`. **Evals** is what `multilingual-oellm-eu[code]` schedules.
+
+| Code | Language | Evals |  | Code | Language | Evals |
+| --- | --- | --- | --- | --- | --- | --- |
+| `als_Latn` | Albanian | 7 |  | `ita_Latn` | Italian | 19 |
+| `bos_Latn` | Bosnian | 5 |  | `kat_Geor` | Georgian | 7 |
+| `bul_Cyrl` | Bulgarian | 11 |  | `lit_Latn` | Lithuanian | 12 |
+| `cat_Latn` | Catalan | 8 |  | `lvs_Latn` | Latvian | 8 |
+| `ces_Latn` | Czech | 12 |  | `mkd_Cyrl` | Macedonian | 7 |
+| `dan_Latn` | Danish | 9 |  | `mlt_Latn` | Maltese | 4 |
+| `deu_Latn` | German | 20 |  | `nld_Latn` | Dutch | 14 |
+| `ell_Grek` | Greek | 13 |  | `nno_Latn` | Norwegian Nynorsk | 2 |
+| `eng_Latn` | English | 13 |  | `nob_Latn` | Norwegian Bokmål | 9 |
+| `est_Latn` | Estonian | 12 |  | `pol_Latn` | Polish | 13 |
+| `eus_Latn` | Basque | 7 |  | `por_Latn` | Portuguese | 18 |
+| `fin_Latn` | Finnish | 11 |  | `ron_Latn` | Romanian | 12 |
+| `fra_Latn` | French | 20 |  | `slk_Latn` | Slovak | 11 |
+| `gle_Latn` | Irish | 4 |  | `slv_Latn` | Slovenian | 10 |
+| `glg_Latn` | Galician | 7 |  | `spa_Latn` | Spanish | 20 |
+| `hrv_Latn` | Croatian | 10 |  | `srp_Cyrl` | Serbian | 12 |
+| `hun_Latn` | Hungarian | 13 |  | `swe_Latn` | Swedish | 12 |
+| `isl_Latn` | Icelandic | 7 |  | `tur_Latn` | Turkish | 11 |
+|  |  |  |  | `ukr_Cyrl` | Ukrainian | 11 |
+
+Translation tasks count for their non-English language. English-only groups (`dclm-core-22`, `open-sci-0.01`) can't be language-filtered.

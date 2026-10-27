@@ -1,0 +1,75 @@
+---
+title: "Configuration"
+description: "Cluster presets, environment variables and output files."
+---
+
+## Cluster presets
+
+Presets live in [`clusters.yaml`](https://github.com/OpenEuroLLM/oellm-eval/blob/main/oellm/resources/clusters.yaml). The cluster is detected from SLURM's cluster name, then from the hostname. Anything you `export` overrides the preset.
+
+```yaml
+lumi:
+  hostname_pattern: ["uan*", "nid*"]
+  EVAL_BASE_DIR: "/scratch/project_465002530/oellm-cli-shared-evals"
+  PARTITION: "small-g"
+  ACCOUNT: "project_465002530"
+  QUEUE_LIMIT: 210
+  EVAL_CONTAINER_IMAGE: "eval_env-lumi.sif"
+  SINGULARITY_ARGS: "--rocm"
+```
+
+| Key | Meaning |
+|---|---|
+| `EVAL_BASE_DIR` | Shared evaluation folder; container images are stored here |
+| `EVAL_OUTPUT_DIR` | Where runs are written (default `$EVAL_BASE_DIR/$USER`) |
+| `PARTITION`, `ACCOUNT` | SLURM partition and account |
+| `QUEUE_LIMIT` | Maximum jobs you can have queued at once |
+| `EVAL_CONTAINER_IMAGE` | Image name on [openeurollm/evaluation_singularity_images](https://huggingface.co/datasets/openeurollm/evaluation_singularity_images) |
+| `SINGULARITY_ARGS` | `--nv` (NVIDIA) or `--rocm` (AMD) |
+| `GPUS_PER_NODE`, `SLURM_MEM` | Default 1 GPU, 96G |
+
+| Cluster | `EVAL_BASE_DIR` |
+| --- | --- |
+| LUMI | `/scratch/project_465002530/oellm-cli-shared-evals` |
+| Leonardo | `/leonardo_work/AIFAC_L01_028/oellm-cli-shared-evals` |
+| JURECA | `/p/data1/mmlaion/oellm_shared_evals` |
+| Jupiter | `/e/data1/datasets/playground/mmlaion/shared/oellm_shared_evals` |
+| Snellius | `/projects/0/prjs1874/oellm_shared_evals` |
+| UFAL | `/lnet/troja/projects/oellm-shared-evals` |
+
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `HF_HOME` | **Required.** Shared model and dataset cache |
+| `HF_TOKEN` | Hugging Face token |
+| `EVAL_OUTPUT_DIR` | Put runs somewhere else (e.g. one folder per project) |
+| `BATCH_SIZE` | lighteval batch size (32 on clusters, 1 locally) |
+| `MODEL_ARGS` | Replace lighteval's model arguments entirely |
+| `HF_HUB_OFFLINE` | Offline mode inside jobs (default on for clusters, off for `--local`) |
+| `LM_EVAL_INCLUDE_PATH` | Extra lm-eval task folder |
+| `EVALCHEMY_DIR`, `HF_ALLOW_CODE_EVAL` | For the `reasoning` group |
+
+<Warning>
+Move results with `EVAL_OUTPUT_DIR`, not `EVAL_BASE_DIR`: changing the base folder makes oellm-eval download the container image again.
+</Warning>
+
+## Output files
+
+```text
+<run directory>/
+├── jobs.csv              # model_path, task_path, n_shot, eval_suite
+├── submit_evals.sbatch   # the exact script submitted
+├── slurm_logs/           # oellm-eval-<jobid>-<index>.out / .err
+└── results/              # lm-eval JSON files, lighteval/evalchemy sub-folders
+```
+
+**`jobs.csv`**: one row per evaluation. The same format is accepted by `schedule --eval_csv_path`.
+
+```csv
+model_path,task_path,n_shot,eval_suite
+EleutherAI/pythia-160m,hellaswag,10,lm-eval-harness
+EleutherAI/pythia-160m,flores200:deu_Latn-eng_Latn,4,lighteval
+```
+
+**`collect` output**: `model_name`, `task`, `n_shot`, `metric_name`, `performance`. With `--check`, missing evaluations go to `<name>_missing.csv` in `jobs.csv` format.

@@ -1,0 +1,157 @@
+---
+title: "Installation"
+description: "Install the CLI and choose a runtime: the cluster container or your own venv."
+---
+
+oellm-eval has two parts:
+
+- **The CLI** runs on the login node. It plans evaluations, downloads models and datasets, and submits jobs.
+- **The runtime** runs lm-evaluation-harness and lighteval on the GPU nodes: either the cluster's **container** (default) or a **venv** passed with `--venv_path`.
+
+## Install the CLI
+
+```bash
+uv tool install -p 3.12 git+https://github.com/OpenEuroLLM/oellm-eval.git
+```
+
+Requires [uv](https://docs.astral.sh/uv/#installation) and Python 3.11 or 3.12.
+
+```bash
+uv tool upgrade oellm-eval                                                     # latest main
+uv tool install -p 3.12 --force "git+https://github.com/OpenEuroLLM/oellm-eval.git@<commit>"   # pin a version
+```
+
+<Note>
+Benchmark definitions ship with the CLI. Upgrade to get new benchmarks and fixes; pin a commit when results must stay comparable.
+</Note>
+
+## Choose a runtime
+
+| | Container (default) | venv (`--venv_path`) |
+|---|---|---|
+| Setup | None: the image is downloaded automatically | Build once on a shared filesystem |
+| Harness versions | Fixed at image build | Whatever you install |
+| Use it on | Leonardo, JURECA, Jupiter, Snellius | **LUMI**, UFAL, and for the `reasoning` and `dclm-core-22` groups |
+
+<Warning>
+**On LUMI, always use a venv.** The container's lighteval can't see LUMI's AMD GPUs and silently runs on CPU. A ready-made venv is available at `/scratch/project_465002530/venvs/oellm-eval-rocm`.
+</Warning>
+
+## Build a venv
+
+<Tabs>
+  <Tab title="NVIDIA (CUDA)">
+    ```bash
+    VENV=/path/on/shared/fs/oellm-venv
+    uv venv --python 3.12 $VENV
+    
+    uv pip install --python $VENV/bin/python \
+        "oellm-eval[eval] @ git+https://github.com/OpenEuroLLM/oellm-eval.git"
+    
+    UV_TOOL_DIR=$VENV/../.uv-tools UV_TOOL_BIN_DIR=$VENV/bin \
+      uv tool install --python 3.12 \
+        --with "langcodes[data]" --with "pillow" --with "xxhash<4" \
+        "lighteval[multilingual] @ git+https://github.com/huggingface/lighteval.git"
+    ```
+  </Tab>
+  <Tab title="AMD (ROCm, LUMI)">
+    ```bash
+    VENV=/scratch/project_465002530/users/$USER/oellm-venv
+    uv venv --python 3.12 $VENV
+    
+    uv pip install --python $VENV/bin/python --torch-backend rocm6.4 \
+        "oellm-eval[eval-base] @ git+https://github.com/OpenEuroLLM/oellm-eval.git" \
+        torch transformers accelerate
+    
+    UV_TOOL_DIR=$VENV/../.uv-tools UV_TOOL_BIN_DIR=$VENV/bin \
+      uv tool install --python 3.12 --torch-backend rocm6.4 \
+        --with "langcodes[data]" --with "pillow" --with "xxhash<4" \
+        "lighteval[multilingual] @ git+https://github.com/huggingface/lighteval.git"
+    ```
+    `--torch-backend rocm6.4` is needed on both commands, otherwise uv installs a CUDA torch.
+  </Tab>
+</Tabs>
+
+- `[eval]` installs lm-eval with CUDA torch; `[eval-base]` leaves torch to you.
+- lighteval is installed as a separate tool so its dependencies stay out of the lm-eval environment. `UV_TOOL_BIN_DIR` puts the `lighteval` command in `$VENV/bin`, where jobs look for it.
+- `xxhash<4` avoids a lighteval crash (`Strings must be encoded before hashing`).
+
+Check it on a GPU node:
+
+```bash
+$VENV/bin/python -c "import torch, lm_eval; print(torch.__version__, torch.cuda.is_available(), lm_eval.__version__)"
+$VENV/bin/lighteval --help | head -1
+```
+
+## Special environments
+
+Two groups need their own venv.
+
+<AccordionGroup>
+  <Accordion title="dclm-core-22">
+    Stock lm-eval crashes on `agieval_lsat_ar` and `squadv2` in few-shot mode. On LUMI the shared venv is already patched. Elsewhere, pin `lm-eval==0.4.9.2` from a clone of the repo:
+
+    ```bash
+    git clone https://github.com/OpenEuroLLM/oellm-eval.git && cd oellm-eval
+    uv venv --python 3.12 dclm-core-venv
+    uv pip install --python dclm-core-venv/bin/python -r requirements-venv-dclm.txt
+    ```
+
+    Then apply the one-line fix from [lm-evaluation-harness#3436](https://github.com/EleutherAI/lm-evaluation-harness/pull/3436), needed for the `jeopardy` task:
+
+    ```bash
+    dclm-core-venv/bin/python - <<'PY'
+    import pathlib, lm_eval.tasks as t
+    f = pathlib.Path(t.__file__); s = f.read_text()
+    old = "        relative_yaml_path = yaml_path.relative_to(lm_eval_tasks_path)\n"
+    new = ("        try:\n"
+           "            relative_yaml_path = yaml_path.relative_to(lm_eval_tasks_path)\n"
+           "        except ValueError:\n"
+           "            relative_yaml_path = yaml_path\n")
+    if "except ValueError" not in s:
+        f.write_text(s.replace(old, new)); print("patched:", f)
+    PY
+    ```
+
+    Run with `--venv_path dclm-core-venv --skip_checks true`.
+  </Accordion>
+
+  <Accordion title="reasoning (evalchemy)">
+    evalchemy runs only from a venv. Use the pinned fork, which randomises GPQA answer order:
+
+    ```bash
+    git clone https://github.com/Ali-Elganzory/evalchemy.git evalchemy
+    (cd evalchemy && git checkout 54ac97648230c4c3a22c3a2b93068b5a4e573f8d)
+    
+    # from a clone of oellm-eval
+    uv venv --python 3.12 evalchemy-venv
+    uv pip install --python evalchemy-venv/bin/python -r requirements-venv-evalchemy.txt
+    
+    export HF_ALLOW_CODE_EVAL=1          # MBPP executes generated code
+    EVALCHEMY_DIR=$(pwd)/evalchemy oellm-eval schedule \
+        --models "$MODEL" --task_groups "reasoning" \
+        --venv_path evalchemy-venv --skip_checks true
+    ```
+
+    evalchemy uses every GPU in the job, so `--slurm_template_var '{"GPUS_PER_NODE":4}'` speeds it up.
+  </Accordion>
+</AccordionGroup>
+
+## Hugging Face access
+
+- Set `HF_TOKEN` for gated datasets, private models and higher rate limits.
+- Accept the terms of [facebook/flores](https://huggingface.co/datasets/facebook/flores) and [Helsinki-NLP/OpenSubtitles2024-40-langs-15-movies](https://huggingface.co/datasets/Helsinki-NLP/OpenSubtitles2024-40-langs-15-movies) once.
+- For quota errors, make sure you're in the [OpenEuroLLM organisation](https://huggingface.co/OpenEuroLLM).
+
+<Accordion title="Small home directory? (JURECA, UFAL)">
+  Move uv's caches to project storage before installing:
+
+  ```bash
+  export UV_CACHE_DIR=/p/project1/<project>/$USER/.cache/uv-cache
+  export UV_INSTALL_DIR=/p/project1/<project>/$USER/.local
+  export UV_PYTHON_INSTALL_DIR=/p/project1/<project>/$USER/.local/share/uv/python
+  export UV_TOOL_DIR=/p/project1/<project>/$USER/.cache/uv-tool-cache
+  ```
+
+  On UFAL use `/lnet/troja/tmp/$USER/...` instead, and set `HF_HOME` there too.
+</Accordion>

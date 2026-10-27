@@ -1,0 +1,77 @@
+---
+title: "Introduction"
+description: "oellm-eval: schedule LLM benchmarks on HPC clusters and collect the scores."
+icon: "house"
+---
+
+**oellm-eval** is the OpenEuroLLM evaluation tool. Give it a model and a set of benchmarks; it downloads what's needed, submits the work to SLURM, and collects the scores into one CSV.
+
+```bash
+oellm-eval schedule --models "EleutherAI/pythia-160m" --task_groups "open-sci-0.01"
+oellm-eval collect  --results_dir <printed run directory> --output_csv results.csv
+```
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Your first evaluation in about ten minutes.
+  </Card>
+
+  <Card title="Installation" icon="download" href="/installation">
+    Install the CLI and set up a runtime.
+  </Card>
+
+  <Card title="Task Groups" icon="list-check" href="/reference/task-groups">
+    Every benchmark suite, with languages and metrics.
+  </Card>
+
+  <Card title="CLI Reference" icon="terminal" href="/reference/cli">
+    Every flag of `schedule` and `collect`.
+  </Card>
+</CardGroup>
+
+## Design
+
+| Feature | How it works |
+| --- | --- |
+| **Task groups** | One name expands into many evaluations. `multilingual-oellm-eu` alone is 401. |
+| **Offline-first** | Models and datasets are downloaded on the login node; GPU jobs never need the internet. |
+| **Cluster presets** | LUMI, Leonardo, JURECA, Jupiter and Snellius are detected automatically, with partition, account and output folder filled in. |
+| **Two harnesses** | [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) and [lighteval](https://github.com/huggingface/lighteval) (plus [evalchemy](https://github.com/mlfoundations/evalchemy) for reasoning). Each task uses the right one. |
+| **Language filters** | `multilingual-oellm-eu[deu_Latn]` runs every multilingual benchmark that has German. |
+| **Resumable** | `collect --check true` writes the unfinished evaluations to a CSV you can re-submit. |
+
+## Benchmark families
+
+<CardGroup cols={3}>
+  <Card title="Multilingual" icon="language" href="/reference/task-groups#multilingual-groups">
+    36 European languages: FLORES, Belebele, Global-MMLU, INCLUDE, SIB-200, MultiBLIMP, PolyMath and more.
+  </Card>
+
+  <Card title="English core" icon="book" href="/reference/task-groups#english-groups">
+    `dclm-core-22` and `open-sci-0.01`: HellaSwag, ARC, MMLU, PIQA, BoolQ, LAMBADA…
+  </Card>
+
+  <Card title="Reasoning" icon="brain" href="/reference/task-groups#reasoning">
+    GSM8K, IFEval, MBPP, GPQA-Diamond, MATH500, LiveCodeBench, HumanEval, AIME, AMC.
+  </Card>
+</CardGroup>
+
+## Quick examples
+
+```bash
+# Full multilingual suite: 401 evaluations, 36 languages
+oellm-eval schedule --models "my-org/my-model" --task_groups "multilingual-oellm-eu"
+
+# One language across every multilingual benchmark
+oellm-eval schedule --models "my-org/my-model" --task_groups "multilingual-oellm-eu[deu_Latn]"
+
+# English core benchmarks
+oellm-eval schedule --models "my-org/my-model" --task_groups "dclm-core-22"
+
+# Every checkpoint in a training output folder
+oellm-eval schedule --models "/scratch/my-run/checkpoints" --task_groups "open-sci-0.01"
+```
+
+<Note>
+  On LUMI, add `--venv_path /scratch/project_465002530/venvs/oellm-eval-rocm` to every `schedule` command. See [Cluster Scheduling](/guides/cluster-scheduling#lumi).
+</Note>

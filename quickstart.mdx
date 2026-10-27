@@ -1,0 +1,102 @@
+---
+title: "Quickstart"
+description: "Run your first evaluation and get a CSV of scores."
+icon: "rocket"
+---
+
+You need an account on a supported cluster (LUMI, Leonardo, JURECA, Jupiter or Snellius) and a terminal on its login node.
+
+<Steps>
+  <Step title="Install oellm-eval">
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh      # skip if you have uv
+    uv tool install -p 3.12 git+https://github.com/OpenEuroLLM/oellm-eval.git
+    ```
+  </Step>
+  <Step title="Set a model cache and a Hugging Face token">
+    GPU nodes have no internet, so models and datasets are downloaded to a shared folder first.
+
+    <Tabs>
+      <Tab title="LUMI">
+        ```bash
+        export HF_HOME=/scratch/project_465002530/cache
+        export HF_TOKEN=hf_...
+        ```
+      </Tab>
+      <Tab title="Other clusters">
+        ```bash
+        export HF_HOME=/path/on/a/shared/filesystem/hf_home
+        export HF_TOKEN=hf_...
+        ```
+      </Tab>
+    </Tabs>
+
+    Get a token at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens). For the multilingual groups, also accept the terms of [facebook/flores](https://huggingface.co/datasets/facebook/flores) and [OpenSubtitles](https://huggingface.co/datasets/Helsinki-NLP/OpenSubtitles2024-40-langs-15-movies) once.
+  </Step>
+  <Step title="Schedule an evaluation">
+    <Tabs>
+      <Tab title="LUMI">
+        ```bash
+        oellm-eval schedule \
+            --models "EleutherAI/pythia-160m" \
+            --task_groups "open-sci-0.01" \
+            --venv_path /scratch/project_465002530/venvs/oellm-eval-rocm
+        ```
+      </Tab>
+      <Tab title="Other clusters">
+        ```bash
+        oellm-eval schedule \
+            --models "EleutherAI/pythia-160m" \
+            --task_groups "open-sci-0.01"
+        ```
+      </Tab>
+    </Tabs>
+
+    After a few minutes of downloading, it submits the job and prints the run directory:
+
+    ```text
+    📁 Evaluation directory: /scratch/project_465002530/oellm-cli-shared-evals/<you>/2026-09-25-10-15-02
+    🔍 Monitor job status: squeue -j 1234567
+    ```
+  </Step>
+  <Step title="Wait for the jobs">
+    ```bash
+    squeue --me
+    ```
+
+    When your jobs leave the queue, they're done.
+  </Step>
+  <Step title="Collect the scores">
+    ```bash
+    oellm-eval collect --results_dir <run directory> --output_csv results.csv --check true
+    ```
+
+    | model_name | task | n_shot | metric_name | performance |
+    | --- | --- | --- | --- | --- |
+    | EleutherAI/pythia-160m | hellaswag | 10 | acc_norm | … |
+    | EleutherAI/pythia-160m | mmlu | 5 | acc | … |
+
+    Anything that didn't finish is written to `results_missing.csv`. See [Results](/guides/results#re-run-what-failed) to re-submit it.
+  </Step>
+</Steps>
+
+## Useful flags
+
+| To… | Add |
+| --- | --- |
+| See what would run, without submitting | `--dry_run true --skip_checks true` |
+| Run only a few examples per task (smoke test) | `--limit 8` |
+| Run a single language | `--task_groups "multilingual-oellm-eu[fra_Latn]"` |
+| Give big models more time per job | `--slurm_template_var '{"TIME":"11:59:00"}'` |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Running Evaluations" icon="play" href="/guides/running-evaluations">
+    Models, checkpoints, task groups and languages.
+  </Card>
+
+  <Card title="Cluster Scheduling" icon="server" href="/guides/cluster-scheduling">
+    SLURM settings, LUMI, and running locally.
+  </Card>
+</CardGroup>
