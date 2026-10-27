@@ -12,12 +12,13 @@ oellm-eval collect --results_dir <run directory> --output_csv results.csv
 | model_name | task | n_shot | metric_name | performance |
 |---|---|---|---|---|
 | EleutherAI/pythia-160m | hellaswag | 10 | acc_norm | … |
-| EleutherAI/pythia-160m | sib200_deu_Latn | 0 | acc_norm | … |
+| EleutherAI/pythia-160m | sib200_deu_Latn | 0 | acc | … |
 | EleutherAI/pythia-160m | flores200:deu_Latn-eng_Latn | 4 | chrf++ | … |
 
 - Each task keeps its **primary metric** (listed in [Task Groups](/reference/task-groups)). Add `--fetch_all_metrics true` to keep every metric, including standard errors.
 - Grouped benchmarks report their aggregate (`mmlu`, `global_mmlu_full_de`), not each subtask.
 - Accuracies are 0–1; BLEU and chrF++ are 0–100.
+- JudgeArena tasks report every numeric metric in their `run-metadata.v1.json`.
 
 `--results_dir` is searched recursively, so you can point it at a folder holding many runs and get one CSV.
 

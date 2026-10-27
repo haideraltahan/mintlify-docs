@@ -36,7 +36,7 @@ oellm-eval collect  --results_dir <printed run directory> --output_csv results.c
 | **Task groups** | One name expands into many evaluations. `multilingual-oellm-eu` alone is 401. |
 | **Offline-first** | Models and datasets are downloaded on the login node; GPU jobs never need the internet. |
 | **Cluster presets** | LUMI, Leonardo, JURECA, Jupiter and Snellius are detected automatically, with partition, account and output folder filled in. |
-| **Two harnesses** | [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) and [lighteval](https://github.com/huggingface/lighteval) (plus [evalchemy](https://github.com/mlfoundations/evalchemy) for reasoning). Each task uses the right one. |
+| **Several harnesses** | [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) and [lighteval](https://github.com/huggingface/lighteval), plus [evalchemy](https://github.com/mlfoundations/evalchemy) for reasoning and [JudgeArena](https://github.com/OpenEuroLLM/JudgeArena) for LLM-judge benchmarks. Each task uses the right one. |
 | **Language filters** | `multilingual-oellm-eu[deu_Latn]` runs every multilingual benchmark that has German. |
 | **Resumable** | `collect --check true` writes the unfinished evaluations to a CSV you can re-submit. |
 

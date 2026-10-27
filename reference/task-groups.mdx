@@ -36,13 +36,15 @@ Task groups are defined in [`task-groups.yaml`](https://github.com/OpenEuroLLM/o
 | `opensubtitles-eu-xx-en` ★ | Subtitle translation language → English | lm-eval | 0 | bleu | 25 |
 | `pawsx-eu` | Paraphrase detection | lm-eval | 0 | acc | 4 |
 | `polymath-eu-low` / `-medium` / `-high` / `-top` ★ | Math by difficulty tier | lm-eval | 0 | exact_match | 6 each |
-| `sib200-eu` ★ | Topic classification | lm-eval | 0 | acc_norm | 36 |
+| `sib200-eu` ★ | Topic classification | lm-eval | 0 | acc | 36 |
 | `xcopa-eu` ★ | Causal commonsense | lighteval | 0 | acc | 3 |
-| `xcsqa-eu` ★ | Commonsense QA | lm-eval | 0 | acc_norm | 8 |
+| `xcsqa-eu` ★ | Commonsense QA, lettered options | lm-eval | 10 | acc | 8 |
 | `xnli-eu` | Natural language inference | lm-eval | 0 | acc | 6 |
 | `generic-multilingual` | XWinograd, XCOPA, XStoryCloze (all their languages) | lm-eval | 0 | all | 3 |
 
 FLORES and OpenSubtitles are gated on Hugging Face: accept their terms once before running.
+
+`xcsqa-eu` changed in 0.4.0b1 to match `commonsense_qa`: 10-shot, answer options lettered A to E, scored with `acc`. Version 0.3.0 runs it 0-shot as a cloze task, so scores from the two versions aren't comparable.
 
 ## English groups
 
@@ -58,9 +60,27 @@ FLORES and OpenSubtitles are gated on Hugging Face: accept their terms once befo
 
 **`open-sci-0.01`** (12 evals): `copa`, `social_iqa`, `openbookqa`, `lambada_openai`, `winogrande` (0-shot); `mmlu` (5-shot); `hellaswag`, `arc_easy`, `arc_challenge`, `commonsense_qa`, `piqa`, `boolq` (10-shot).
 
+**`crows-pairs`** (1 eval, 0-shot, metric `pct_stereotype`): the CrowS-Pairs social bias benchmark in English.
+
 ## Reasoning
 
 **`reasoning`** (10 evals, all metrics kept). GSM8K (4-shot), IFEval (0) and MBPP (3) run on lm-eval; GPQA-Diamond, MATH500, LiveCodeBench, HumanEval, AIME24, AIME25 and AMC23 (0-shot) run on evalchemy. Needs a [special environment](/installation#special-environments).
+
+**`gpqa-diamond`** (2 evals, lighteval, 0-shot, metric `gpqa_pass@k:k=1`): GPQA Diamond answered by free generation, in English ([Idavidrein/gpqa](https://huggingface.co/datasets/Idavidrein/gpqa), gated) and Finnish ([LumiOpen/GPQA-FI](https://huggingface.co/datasets/LumiOpen/GPQA-FI)). Answers can run to 32,768 tokens, so it needs a small batch size; see [GPU memory](/guides/running-evaluations#gpu-memory). Pick one language with `gpqa-diamond[fin_Latn]`.
+
+## LLM judge (JudgeArena)
+
+These groups run on [JudgeArena](https://github.com/OpenEuroLLM/JudgeArena) and need a judge model; see [LLM-judge benchmarks](/guides/running-evaluations#llm-judge-benchmarks). All are 0-shot, and `collect` keeps every numeric metric JudgeArena reports.
+
+| Group | Contains | Evals |
+| --- | --- | --- |
+| `judgearena` | Super group of `judgearena-default`: AlpacaEval, Arena-Hard v0.1 and v2.0, m-ArenaHard v0.1 and v2.0, MT-Bench, fluency, and the ComparIA and LMArena ELO tasks | 11 |
+| `elo-en` | ComparIA and LMArena ELO tasks in English | 4 |
+| `elo-eu` | ComparIA and LMArena ELO tasks in the supported European languages | 32 |
+| `elo-multilingual` | Super group of `judgearena-comparia` (2) and `judgearena-lmarena` (51): every ELO language variant | 53 |
+| `judgearena-m-arena-hard` | m-ArenaHard v0.1 and v2.0 in 23 languages | 46 |
+| `judgearena-fluency` | Fluency in 43 languages | 43 |
+| `judgearena-additional` | MT-Bench-101, and the EU subsets of m-ArenaHard v0.1 and v2.0 | 3 |
 
 ## Languages
 
@@ -88,4 +108,4 @@ Filter any group with `group[code]`. Codes are `<ISO 639-3>_<Script>`. **Evals**
 | `isl_Latn` | Icelandic | 7 |  | `tur_Latn` | Turkish | 11 |
 |  |  |  |  | `ukr_Cyrl` | Ukrainian | 11 |
 
-Translation tasks count for their non-English language. English-only groups (`dclm-core-22`, `open-sci-0.01`) can't be language-filtered.
+Translation tasks count for their non-English language. English-only groups (`dclm-core-22`, `open-sci-0.01`) can't be language-filtered. JudgeArena groups also accept codes outside this table: `arb_Arab`, `ben_Beng`, `heb_Hebr`, `hin_Deva`, `ind_Latn`, `jpn_Jpan`, `kor_Hang`, `pes_Arab`, `rus_Cyrl`, `vie_Latn` and `zho_Hans`.

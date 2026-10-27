@@ -6,6 +6,7 @@ description: "Every flag of oellm-eval schedule and oellm-eval collect."
 ```text
 oellm-eval schedule [options]    # plan, download and submit evaluations
 oellm-eval collect  [options]    # gather results into a CSV
+oellm-eval --version             # version, install commit and harness versions
 ```
 
 <Note>
@@ -66,6 +67,14 @@ Boolean flags take a value (`--dry_run true`), and flag names use underscores (`
   Folder of custom lm-eval task YAMLs. Defaults to the tasks bundled with oellm-eval.
 </ParamField>
 
+<ParamField path="--lighteval_custom_tasks" type="path">
+  Python file of custom lighteval tasks, passed to lighteval as `--custom-tasks`. Defaults to the bundled `custom_lighteval_tasks/reasoning/reasoning.py` (multilingual GPQA Diamond).
+</ParamField>
+
+<ParamField path="--judgearena_kwargs" type="JSON">
+  Extra JudgeArena arguments, such as the judge model: `'{"judge.model":"OpenRouter/google/gemma-4-31b-it"}'`. oellm-eval sets the task, candidate model, result folder and sample limit itself.
+</ParamField>
+
 ### Testing
 
 <ParamField path="--dry_run" default="false" type="bool">
@@ -77,7 +86,7 @@ Boolean flags take a value (`--dry_run true`), and flag names use underscores (`
 </ParamField>
 
 <ParamField path="--limit" type="int">
-  Evaluate only this many examples per task. For smoke tests only.
+  Evaluate only this many examples per task. For smoke tests only, except on JudgeArena, where it sets the number of instructions.
 </ParamField>
 
 <ParamField path="--download_only" default="false" type="bool">

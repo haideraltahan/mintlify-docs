@@ -9,7 +9,7 @@ Presets live in [`clusters.yaml`](https://github.com/OpenEuroLLM/oellm-eval/blob
 
 ```yaml
 lumi:
-  hostname_pattern: ["uan*", "nid*"]
+  hostname_pattern: ["uan*", "nid[0-9][0-9][0-9][0-9][0-9][0-9]"]
   EVAL_BASE_DIR: "/scratch/project_465002530/oellm-cli-shared-evals"
   PARTITION: "small-g"
   ACCOUNT: "project_465002530"
@@ -49,6 +49,7 @@ lumi:
 | `HF_HUB_OFFLINE` | Offline mode inside jobs (default on for clusters, off for `--local`) |
 | `LM_EVAL_INCLUDE_PATH` | Extra lm-eval task folder |
 | `EVALCHEMY_DIR`, `HF_ALLOW_CODE_EVAL` | For the `reasoning` group |
+| `JUDGEARENA_DATA` | JudgeArena task data (default `$EVAL_BASE_DIR/judgearena-data`) |
 
 <Warning>
 Move results with `EVAL_OUTPUT_DIR`, not `EVAL_BASE_DIR`: changing the base folder makes oellm-eval download the container image again.

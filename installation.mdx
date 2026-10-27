@@ -11,18 +11,24 @@ oellm-eval has two parts:
 ## Install the CLI
 
 ```bash
-uv tool install -p 3.12 git+https://github.com/OpenEuroLLM/oellm-eval.git
+uv tool install -p 3.12 git+https://github.com/OpenEuroLLM/oellm-eval.git@stable
 ```
 
-Requires [uv](https://docs.astral.sh/uv/#installation) and Python 3.11 or 3.12.
+Requires [uv](https://docs.astral.sh/uv/#installation) and Python 3.11 or 3.12. `oellm-eval --version` shows what you have installed; include its output in bug reports.
+
+### Versions
+
+`stable` follows the latest release. `main` is the beta channel: its version ends in `bN` (for example `0.4.0b1`), and any commit on it can change what a task group measures. Pin a release tag for an evaluation campaign so that every run uses the same tasks, shots and metrics.
 
 ```bash
-uv tool upgrade oellm-eval                                                     # latest main
-uv tool install -p 3.12 --force "git+https://github.com/OpenEuroLLM/oellm-eval.git@<commit>"   # pin a version
+uv tool install -p 3.12 --force git+https://github.com/OpenEuroLLM/oellm-eval.git@v0.3.0   # pinned release
+uv tool install -p 3.12 --force git+https://github.com/OpenEuroLLM/oellm-eval.git@stable   # latest release
+uv tool install -p 3.12 --force git+https://github.com/OpenEuroLLM/oellm-eval.git          # main (beta)
+uv tool upgrade oellm-eval                                                                 # stays on the ref you installed from
 ```
 
 <Note>
-Benchmark definitions ship with the CLI. Upgrade to get new benchmarks and fixes; pin a commit when results must stay comparable.
+Benchmark definitions ship with the CLI, so a new version can change scores. The [changelog](https://github.com/OpenEuroLLM/oellm-eval/blob/main/CHANGELOG.md) lists those changes under **Changed results**. Check it before comparing runs made with different versions.
 </Note>
 
 ## Choose a runtime
@@ -140,7 +146,7 @@ Two groups need their own venv.
 ## Hugging Face access
 
 - Set `HF_TOKEN` for gated datasets, private models and higher rate limits.
-- Accept the terms of [facebook/flores](https://huggingface.co/datasets/facebook/flores) and [Helsinki-NLP/OpenSubtitles2024-40-langs-15-movies](https://huggingface.co/datasets/Helsinki-NLP/OpenSubtitles2024-40-langs-15-movies) once.
+- Accept the terms of [facebook/flores](https://huggingface.co/datasets/facebook/flores) and [Helsinki-NLP/OpenSubtitles2024-40-langs-15-movies](https://huggingface.co/datasets/Helsinki-NLP/OpenSubtitles2024-40-langs-15-movies) once, and of [Idavidrein/gpqa](https://huggingface.co/datasets/Idavidrein/gpqa) for `gpqa-diamond`.
 - For quota errors, make sure you're in the [OpenEuroLLM organisation](https://huggingface.co/OpenEuroLLM).
 
 <Accordion title="Small home directory? (JURECA, UFAL)">

@@ -65,7 +65,7 @@ A benchmark is done when it's **registered in `task-groups.yaml`**, **limited to
     | Field | Level | Required | Meaning |
     |---|---|---|---|
     | `description` | group | yes | One line; keep YAML lines under 80 characters |
-    | `suite` | group or task | yes | `lm-eval-harness`, `lighteval` or `evalchemy` |
+    | `suite` | group or task | yes | `lm-eval-harness`, `lighteval`, `evalchemy` or `judgearena` |
     | `n_shots` | group or task | yes | List of shot counts |
     | `dataset` | group or task | yes | HF dataset repo, pre-downloaded before jobs run |
     | `metric` | group or task | recommended | Primary metric for `collect`. Without it, all metrics are kept. |
@@ -118,8 +118,10 @@ A benchmark is done when it's **registered in `task-groups.yaml`**, **limited to
     - No published number: record your measurement as the initial baseline and say so in the PR.
   </Step>
   <Step title="Open a pull request">
+    Add a line to `CHANGELOG.md` under `[Unreleased]`: in **Added** for a new benchmark, or in **Changed results** if you changed an existing task's prompt, shots, metric, data or scoring. The pull request template asks for it.
+
     ```bash
-    git add oellm/resources/task-groups.yaml oellm/resources/custom_lm_eval_tasks/<name>
+    git add CHANGELOG.md oellm/resources/task-groups.yaml oellm/resources/custom_lm_eval_tasks/<name>
     git commit -m "feat: add MyBench (EU languages) for lm-eval-harness"
     git push -u origin add-<benchmark>
     ```

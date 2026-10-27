@@ -25,7 +25,7 @@ grep -h '\[error\]' <run directory>/slurm_logs/*.out | sort | uniq -c
     That group doesn't cover the language (e.g. FLORES-EU has no Ukrainian). Check the group's languages in [Task Groups](/reference/task-groups).
   </Accordion>
   <Accordion title="Unknown task group(s)">
-    Typo, or an old CLI. Run `uv tool upgrade oellm-eval`.
+    Typo, or a group your version doesn't have. Compare `oellm-eval --version` with the [changelog](https://github.com/OpenEuroLLM/oellm-eval/blob/main/CHANGELOG.md), then upgrade or [install a newer version](/installation#versions).
   </Accordion>
   <Accordion title="No valid Python virtual environment found">
     `--venv_path` must be the venv folder itself, the one containing `bin/python`.
@@ -91,4 +91,4 @@ grep -h '\[error\]' <run directory>/slurm_logs/*.out | sort | uniq -c
   </Accordion>
 </AccordionGroup>
 
-Still stuck? [Open an issue](https://github.com/OpenEuroLLM/oellm-eval/issues) with your command and the relevant log lines.
+Still stuck? [Open an issue](https://github.com/OpenEuroLLM/oellm-eval/issues). The form asks for the output of `oellm-eval --version`, your cluster and runtime, the command and the relevant log lines.

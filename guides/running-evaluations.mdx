@@ -73,6 +73,7 @@ A task group is a named set of tasks with their shot counts. Use one or more:
 | English core (DCLM) | `dclm-core-22` | 22 |
 | Quick English check | `open-sci-0.01` | 12 |
 | Reasoning, math, code | `reasoning` | 10 |
+| LLM-judge benchmarks | `judgearena` | 11 |
 
 See [Task Groups](/reference/task-groups) for all of them.
 
@@ -110,6 +111,20 @@ For full control, list every evaluation in a CSV (`model_path`, `task_path`, `n_
 oellm-eval schedule --eval_csv_path evals.csv
 ```
 
+### LLM-judge benchmarks
+
+JudgeArena tasks are scored by a judge model, which you pass with `--judgearena_kwargs`:
+
+```bash
+oellm-eval schedule --models "/path/to/model" --tasks "arena-hard-v2.0" --n_shot 0 \
+    --judgearena_kwargs '{"judge.model":"OpenRouter/google/gemma-4-31b-it"}'
+```
+
+- The venv or container must provide the `judgearena` command.
+- Task data is downloaded on the login node into `JUDGEARENA_DATA` (default `$EVAL_BASE_DIR/judgearena-data`). `--download_only true` stages it without submitting.
+- `--limit` sets the number of instructions.
+- Local task files, prompt overrides and `meta-eval-*` tasks aren't supported.
+
 ## Test before a full run
 
 ```bash
@@ -127,3 +142,11 @@ Each evaluation loads the model on one GPU; more GPUs per job don't split it. lm
 ```bash
 BATCH_SIZE=8 oellm-eval schedule --models "$MODEL" --task_groups "flores-200-eu-to-eng"
 ```
+
+`gpqa-diamond` generates up to 32,768 tokens per answer, and lighteval's memory use grows with that length for every sequence in the batch, so the default of 32 doesn't fit. Schedule it on its own with a small batch:
+
+```bash
+BATCH_SIZE=1 oellm-eval schedule --models "$MODEL" --task_groups "gpqa-diamond"
+```
+
+With `BATCH_SIZE=1` on one 64 GB MI250X GCD, Qwen2.5-7B-Instruct took 1.5 h for English and 2.8 h for Finnish.
