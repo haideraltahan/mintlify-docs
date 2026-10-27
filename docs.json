@@ -46,6 +46,12 @@
         ]
       },
       {
+        "group": "Eval analysis",
+        "pages": [
+          "eval-analysis/sib200"
+        ]
+      },
+      {
         "group": "Contributing",
         "pages": [
           "contributing/add-a-benchmark",
