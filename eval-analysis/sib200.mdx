@@ -1,124 +1,62 @@
 ---
 title: "SIB-200"
-description: "Why sib200-eu uses 10 shots taken from the start of the train split."
+description: "Why sib200-eu runs 10-shot with the first 10 train examples, scored with acc."
 ---
 
-<Note>
-  The setup on this page is proposed in [#137](https://github.com/OpenEuroLLM/oellm-eval/pull/137) and is not in a release yet. Until #137 merges, `sib200-eu` runs 0-shot, as [Task Groups](/reference/task-groups) lists.
-</Note>
+`sib200-eu` runs 10-shot since [#137](https://github.com/OpenEuroLLM/oellm-eval/pull/137). Before that it ran 0-shot, and few-shot runs took their examples from the test split.
 
-[#137](https://github.com/OpenEuroLLM/oellm-eval/pull/137) runs SIB-200 with 10 shots taken in order from the start of the train split, scored with `acc`. It follows an analysis by [spyysalo](https://github.com/spyysalo) on all 36 languages of the 2B model. This page reruns that comparison on two OpenEuroLLM models.
-
-| Setting | #137 | Before #137 |
+| Choice | Value | Why |
 |---|---|---|
-| Shots (`n_shots` in `task-groups.yaml`) | 10 | 0 |
-| `fewshot_split` | `train` | `test` |
-| `fewshot_config.sampler` | `first_n` | `first_n` |
-| Metric | `acc` | `acc` |
+| Shots | 10 | 0-shot scores low and jumps between checkpoints. 10 shots score higher and move less on both models. |
+| `fewshot_split` | `train` | The test split is sorted by label and starts with 51 science/technology items, so its first examples all carry that label. |
+| `fewshot_config.sampler` | `first_n` | The first 10 train examples beat 10 random train or validation examples, and every item in every language gets the same prompt. |
+| Metric | `acc` | `acc_norm` divides by label length and scores 0.25 at 0-shot, the same as always answering science/technology. It also stays below `acc` at 10 shots. |
 
-## The test split is sorted by label
-
-SIB-200 has 7 topic labels. The dataset is parallel across languages, so every language has the same 701 train, 99 validation and 204 test items.
-
-| Label | train | validation | test |
-|---|---|---|---|
-| science/technology | 176 | 25 | 51 |
-| travel | 138 | 20 | 40 |
-| politics | 102 | 14 | 30 |
-| sports | 85 | 12 | 25 |
-| health | 77 | 11 | 22 |
-| entertainment | 65 | 9 | 19 |
-| geography | 58 | 8 | 17 |
-
-The test split comes in blocks of one label, in the order of this table, so its first 51 items are all science/technology. Before #137 the few-shot examples were the first items of the test split. Every example in a few-shot prompt was therefore a science/technology item from the test set itself, and the model learned to answer science/technology. Always answering science/technology scores 51/204 = 0.25. That is above chance (1/7 = 0.143), which makes a flat 0.25 easy to misread as a weak model.
-
-With 10 test examples the 2B model scores exactly 0.250 at every checkpoint. The 9B model averages 0.282 with 10 test examples and 0.556 with 5, so it partly overrides five identical labels but not ten.
-
-## Setup
-
-- Models: [`openeurollm/datamix-2b-80-20`](https://huggingface.co/openeurollm/datamix-2b-80-20) (2B) at steps 100k, 200k, …, 900k and 950k, and [`openeurollm/prelude`](https://huggingface.co/openeurollm/prelude) (9B) at ten main-run checkpoints from step 100,800 to 950,400 (branches `iter_0100800` to `iter_0950400`).
-- Languages: `eng_Latn`, `deu_Latn`, `fin_Latn`, `ell_Grek` and `mlt_Latn`, 5 of the 36 in `sib200-eu`. English and German are high-resource, Finnish matches the table in #137, Greek has a non-Latin script and Maltese is low-resource.
-- Harness: oellm-eval 0.4.0b1 with lm-eval 0.4.13, the bundled SIB-200 prompt, the full test set and lm-eval's default few-shot seed (1234).
-- 917 evaluations on NCSA Delta A40 GPUs: 7 setups × 5 languages × 20 checkpoints, plus all 36 languages on the first 2B checkpoint as a cross-check.
-
-| Setup | Few-shot split | Sampler | Shots |
-|---|---|---|---|
-| 0-shot (current default) | none | none | 0 |
-| train, first 5 | `train` | `first_n` | 5 |
-| train, first 10 (#137) | `train` | `first_n` | 10 |
-| test, first 5 (before #137) | `test` | `first_n` | 5 |
-| test, first 10 | `test` | `first_n` | 10 |
-| train, random 10 | `train` | `default` | 10 |
-| validation, random 10 | `validation` | `default` | 10 |
-
-`first_n` gives every test item the first n examples of the split. `default` draws a new random set for each test item from a generator seeded with 1234. "test, first 5" is what a few-shot SIB-200 run got before #137.
-
-## Results
-
-<Frame caption="Accuracy averaged over the five languages at each checkpoint. Dashed lines mark 0.25 (always science/technology) and 0.143 (chance).">
+<Frame caption="Accuracy averaged over eng_Latn, deu_Latn, fin_Latn, ell_Grek and mlt_Latn at each checkpoint. Dashed lines mark 0.25 (always science/technology) and 0.143 (chance, 1/7).">
   <img src="/images/eval-analysis/sib200-fewshot.png" alt="SIB-200 accuracy across checkpoints for few-shot setups on datamix-2b-80-20 and prelude" />
 </Frame>
 
-Mean over the ten checkpoints of each model, score at the last checkpoint, and mean absolute change between consecutive checkpoints (lower is steadier):
+| Setup | 2B mean | 2B change | 9B mean | 9B change |
+|---|---|---|---|---|
+| 0-shot | 0.367 | 0.066 | 0.438 | 0.093 |
+| train, first 5 | 0.525 | 0.075 | 0.770 | 0.050 |
+| train, first 10 (used) | 0.755 | 0.045 | 0.817 | 0.030 |
+| train, random 10 | 0.649 | 0.045 | 0.787 | 0.027 |
+| validation, random 10 | 0.674 | 0.036 | 0.800 | 0.041 |
+| test, first 10 | 0.250 | 0.000 | 0.282 | 0.027 |
 
-| Setup | 2B mean | 2B last | 2B change | 9B mean | 9B last | 9B change |
-|---|---|---|---|---|---|---|
-| 0-shot (current default) | 0.367 | 0.363 | 0.066 | 0.438 | 0.493 | 0.093 |
-| train, first 5 | 0.525 | 0.591 | 0.075 | 0.770 | 0.819 | 0.050 |
-| train, first 10 (#137) | 0.755 | 0.766 | 0.045 | 0.817 | 0.841 | 0.030 |
-| test, first 5 (before #137) | 0.252 | 0.251 | 0.002 | 0.556 | 0.604 | 0.106 |
-| test, first 10 | 0.250 | 0.250 | 0.000 | 0.282 | 0.258 | 0.027 |
-| train, random 10 | 0.649 | 0.652 | 0.045 | 0.787 | 0.782 | 0.027 |
-| validation, random 10 | 0.674 | 0.686 | 0.036 | 0.800 | 0.797 | 0.041 |
+"Mean" is over ten checkpoints of [`openeurollm/datamix-2b-80-20`](https://huggingface.co/openeurollm/datamix-2b-80-20) (2B, steps 100k to 950k) and [`openeurollm/prelude`](https://huggingface.co/openeurollm/prelude) (9B, steps 100,800 to 950,400, before cooldown). "Change" is the mean absolute change between consecutive checkpoints. Random setups draw a new set per test item with lm-eval's default seed (1234). Runs used oellm-eval 0.4.0b1, lm-eval 0.4.13 and the full test set of 204 items per language.
 
-## Why these settings
-
-### 10 shots
-
-0-shot is low and jumps between checkpoints: the 2B averages 0.367 and moves 0.066 per checkpoint, the 9B averages 0.438 and moves 0.093. With the first 10 train examples the 2B averages 0.755 and moves 0.045, and the 9B averages 0.817 and moves 0.030. Five shots fall between the two on the 2B (0.525) and come close to ten on the 9B (0.770). On the 2B the 10-shot score also rises with training (Kendall's τ of 0.42 between score and step, against 0.02 at 0-shot).
-
-### The first 10 train examples
-
-Of the sources that work, the first 10 train examples score highest on both models: 0.755 against 0.649 (random train) and 0.674 (random validation) on the 2B, and 0.817 against 0.787 and 0.800 on the 9B. The gap is large on the 2B and small on the 9B.
-
-`first_n` also fixes the prompt. Every test item in every language gets the same ten examples in the same order, so a change in score comes from the model or the language. With the default sampler each test item gets a different set, and the sets depend on the seed and on the order of the items.
-
-The first 10 train examples cover 5 of the 7 labels: politics (3), geography, science/technology and entertainment (2 each) and health (1). Travel and sports, 65 of the 204 test items, never appear in the prompt. This setup still scores best, but accuracy on those two labels was not checked separately.
-
-### acc as the metric
-
-`acc_norm` divides each label's log-likelihood by the label's length in characters. At 0-shot it gives 0.251 on the 2B and 0.250 on the 9B, the same score as always answering science/technology. With the first 10 train examples it stays below `acc`: 0.656 against 0.755 on the 2B and 0.791 against 0.817 on the 9B. #137 keeps `acc`.
+Always answering science/technology scores 51/204 = 0.25. That is above chance, so the old few-shot plateau looked like a weak model.
 
 ## Caveats
 
-- Only 5 languages so far. On the first 2B checkpoint, where all 36 ran, the 5-language means are within 0.05 of the 36-language means and rank the setups in the same order (0.668 against 0.659 for train, first 10).
-- All checkpoints are intermediate. The Prelude ones are from the main run before cooldown.
-- The random setups use one seed.
-- On the 9B, every working 10-shot setup sits near 0.8 from the first checkpoint on, so SIB-200 changes little across these Prelude checkpoints.
-- For `fin_Latn` on the 2B at step 950k, train, first 10 scores 0.779 here and 0.799 in the table in #137. The setups rank in the same order in both.
+- Five of the 36 languages. On the first 2B checkpoint, where all 36 ran, the setups rank in the same order.
+- The first 10 train examples have no travel or sports items, which are 65 of the 204 test items. Accuracy per label was not checked.
+- The 9B model is near 0.8 at 10 shots from its first checkpoint on, so SIB-200 shows little change across Prelude's training.
 
-## Reproduce
+<Accordion title="Reproduce">
+  Each setup is a task YAML next to a copy of the bundled `_default_template_yaml`. The `sib200an_` prefix keeps the names apart from the bundled tasks.
 
-Each setup is a task YAML in one folder, next to a copy of the bundled `_default_template_yaml`:
+  ```yaml
+  include: _default_template_yaml
+  task: sib200an_trainfirst_fin_Latn
+  dataset_name: fin_Latn
+  test_split: test
+  fewshot_split: train
+  fewshot_config:
+    sampler: first_n
+  ```
 
-```yaml
-include: _default_template_yaml
-task: sib200an_trainfirst_fin_Latn
-dataset_name: fin_Latn
-test_split: test
-fewshot_split: train
-fewshot_config:
-  sampler: first_n
-```
+  List one row per checkpoint, task and shot count. `model_path` is a local snapshot of a checkpoint branch, for example from `snapshot_download("openeurollm/prelude", revision="iter_0950400")`.
 
-The `sib200an_` prefix keeps the names apart from the bundled `sib200_*` tasks. List the evaluations in a CSV, one row per checkpoint, task and shot count. `model_path` is a local snapshot of a checkpoint branch, for example from `snapshot_download("openeurollm/prelude", revision="iter_0950400")`.
+  ```csv
+  model_path,task_path,n_shot,eval_suite
+  /path/to/prelude/iter_0950400,sib200an_trainfirst_fin_Latn,10,lm-eval-harness
+  ```
 
-```csv
-model_path,task_path,n_shot,eval_suite
-/path/to/prelude/iter_0950400,sib200an_trainfirst_fin_Latn,10,lm-eval-harness
-```
-
-```bash
-oellm-eval schedule --eval_csv_path evals.csv --lm_eval_include_path tasks/
-oellm-eval collect --results_dir <run directory> --output_csv results.csv --check true
-```
+  ```bash
+  oellm-eval schedule --eval_csv_path evals.csv --lm_eval_include_path tasks/
+  oellm-eval collect --results_dir <run directory> --output_csv results.csv --check true
+  ```
+</Accordion>
