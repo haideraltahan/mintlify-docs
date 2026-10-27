@@ -41,7 +41,8 @@
         "pages": [
           "reference/cli",
           "reference/task-groups",
-          "reference/configuration"
+          "reference/configuration",
+          "changelog"
         ]
       },
       {

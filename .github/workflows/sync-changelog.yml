@@ -1,0 +1,27 @@
+name: Sync changelog
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild changelog.mdx from oellm-eval's CHANGELOG.md
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/OpenEuroLLM/oellm-eval/main/CHANGELOG.md \
+            | python3 .github/scripts/sync_changelog.py > changelog.mdx
+      - name: Commit if it changed
+        run: |
+          git diff --quiet -- changelog.mdx && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add changelog.mdx
+          git commit -m "Sync changelog from oellm-eval"
+          git push
