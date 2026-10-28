@@ -48,7 +48,8 @@
       {
         "group": "Eval analysis",
         "pages": [
-          "eval-analysis/sib200"
+          "eval-analysis/sib200",
+          "eval-analysis/xcsqa"
         ]
       },
       {

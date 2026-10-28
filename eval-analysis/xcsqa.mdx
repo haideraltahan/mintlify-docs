@@ -1,0 +1,70 @@
+---
+title: "XCSQA"
+description: "Why xcsqa-eu runs 10-shot with CommonsenseQA's lettered prompt, random examples and acc."
+---
+
+`xcsqa-eu` uses the setup of CommonsenseQA, which XCSQA translates, since [#142](https://github.com/OpenEuroLLM/oellm-eval/pull/142). Before that it ran 0-shot with a cloze prompt and `acc_norm`.
+
+| Choice | Value | Why |
+|---|---|---|
+| Prompt | MCF: the question, choices lettered A to E, and the answer letter | It is the prompt of lm-eval's `commonsense_qa`. On English, XCSQA then averages the same as CommonsenseQA on both models (0.451 against 0.448 on the 2B, 0.697 against 0.695 on the 9B). |
+| Shots | 10 | MCF at 0-shot stays near chance on the 2B. 5 and 10 shots score within 0.004 of each other, and `task-groups.yaml` runs `commonsense_qa` at 10. |
+| `fewshot_split` | `validation` | XCSQA has no train split, and its test split has no answers. lm-eval leaves the item being scored out of its own examples. |
+| `fewshot_config.sampler` | `default` | The first 10 and 10 random examples score within 0.002 of each other. Random is what `commonsense_qa` uses. |
+| Metric | `acc` | With single-letter choices `acc_norm` equals `acc` exactly. With the cloze prompt `acc_norm` was the lower of the two at 0-shot. |
+
+<Frame caption="Accuracy averaged over eng_Latn, deu_Latn, fra_Latn, nld_Latn and pol_Latn at each checkpoint; CommonsenseQA is English only. The dashed line marks chance (1/5).">
+  <img src="/images/eval-analysis/xcsqa-fewshot.png" alt="XCSQA accuracy across checkpoints for prompt, shot and sampler setups on datamix-2b-80-20 and prelude" />
+</Frame>
+
+| Setup | 2B mean | 2B change | 9B mean | 9B change |
+|---|---|---|---|---|
+| cloze, 0-shot (before #142) | 0.340 | 0.006 | 0.401 | 0.010 |
+| MCF, 0-shot | 0.246 | 0.018 | 0.468 | 0.035 |
+| MCF, random 5 | 0.373 | 0.034 | 0.600 | 0.013 |
+| MCF, random 10 (used) | 0.376 | 0.034 | 0.604 | 0.013 |
+| MCF, first 10 | 0.376 | 0.039 | 0.606 | 0.013 |
+| cloze, random 10 | 0.457 | 0.010 | 0.558 | 0.005 |
+| CommonsenseQA (English) | 0.448 | 0.051 | 0.695 | 0.018 |
+
+"Mean" is over ten checkpoints of [`openeurollm/datamix-2b-80-20`](https://huggingface.co/openeurollm/datamix-2b-80-20) (2B, steps 100k to 950k) and [`openeurollm/prelude`](https://huggingface.co/openeurollm/prelude) (9B, steps 100,800 to 950,400, before cooldown). "Change" is the mean absolute change between consecutive checkpoints. Cloze rows use `acc_norm`, the metric before #142, and the rest use `acc`. Random setups draw a new set per item with lm-eval's default seed (1234). Runs used oellm-eval 0.4.0b1, lm-eval 0.4.13 and all 1,000 validation items per language (1,221 for CommonsenseQA).
+
+On the 2B, MCF stays at chance until step 200k and then climbs with CommonsenseQA (r = 0.99 on English across checkpoints), while cloze starts higher and barely moves. At the last checkpoint MCF and cloze both reach 0.48. On the 9B, MCF beats cloze at 10 shots by 0.046.
+
+## Caveats
+
+- Five of the eight languages in `xcsqa-eu`.
+- Before step 300k the 2B scores 0.21 to 0.22 with MCF at 10 shots, close to chance, while cloze scores 0.44. Models that early need a cloze variant, as #142 suggests.
+- The few-shot examples come from the same validation split that is scored.
+- The 9B changes little across Prelude's checkpoints, so its correlation with CommonsenseQA (r = 0.60 on English) says little.
+
+<Accordion title="Reproduce">
+  Each setup is a task YAML next to a copy of the bundled XCSQA `_default_template_yaml`, which has the MCF prompt. A cloze setup overrides the prompt:
+
+  ```yaml
+  include: _default_template_yaml
+  task: xcsqaan_clozerand_deu_Latn
+  dataset_name: X-CSQA-de
+  doc_to_text: "Question: {{question.stem}}\nAnswer:"
+  doc_to_target: "{{question.choices.label.index(answerKey)}}"
+  doc_to_choice: "{{question.choices.text}}"
+  fewshot_config:
+    sampler: default
+  metric_list:
+    - metric: acc
+    - metric: acc_norm
+  ```
+
+  List one row per checkpoint, task and shot count. `model_path` is a local snapshot of a checkpoint branch, for example from `snapshot_download("openeurollm/prelude", revision="iter_0950400")`. CommonsenseQA is lm-eval's bundled `commonsense_qa`.
+
+  ```csv
+  model_path,task_path,n_shot,eval_suite
+  /path/to/prelude/iter_0950400,xcsqaan_clozerand_deu_Latn,10,lm-eval-harness
+  /path/to/prelude/iter_0950400,commonsense_qa,10,lm-eval-harness
+  ```
+
+  ```bash
+  oellm-eval schedule --eval_csv_path evals.csv --lm_eval_include_path tasks/
+  oellm-eval collect --results_dir <run directory> --output_csv results.csv --check true
+  ```
+</Accordion>
