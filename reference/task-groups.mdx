@@ -9,7 +9,7 @@ Task groups are defined in [`task-groups.yaml`](https://github.com/OpenEuroLLM/o
 
 | Name | Contains | Evals |
 | --- | --- | --- |
-| `multilingual-oellm-eu` | Every multilingual benchmark in the 36 OpenEuroLLM languages (groups marked ★) | 401 |
+| `multilingual-oellm-eu` | Every multilingual benchmark in the 36 OpenEuroLLM languages (groups marked ★) | 377 |
 | `oellm-multilingual` | FLORES (both directions), Belebele 5-shot, Global-MMLU, MGSM, generic-multilingual, INCLUDE, MultiBLIMP, XCOPA | 173 |
 | `all` | Every group; use it with a language filter, e.g. `all[deu_Latn]` | – |
 
@@ -35,7 +35,7 @@ Task groups are defined in [`task-groups.yaml`](https://github.com/OpenEuroLLM/o
 | `opensubtitles-eu-en-xx` ★ | Subtitle translation English → language | lm-eval | 0 | bleu | 25 |
 | `opensubtitles-eu-xx-en` ★ | Subtitle translation language → English | lm-eval | 0 | bleu | 25 |
 | `pawsx-eu` | Paraphrase detection | lm-eval | 0 | acc | 4 |
-| `polymath-eu-low` / `-medium` / `-high` / `-top` ★ | Math by difficulty tier | lm-eval | 0 | exact_match | 6 each |
+| `polymath-eu-low` / `-medium` / `-high` / `-top` | Math by difficulty tier ([analysis](/eval-analysis/polymath)) | lm-eval | 5 | exact_match | 6 each |
 | `sib200-eu` ★ | Topic classification ([analysis](/eval-analysis/sib200)) | lm-eval | 10 | acc | 36 |
 | `xcopa-eu` ★ | Causal commonsense | lighteval | 0 | acc | 3 |
 | `xcsqa-eu` ★ | Commonsense QA, lettered options ([analysis](/eval-analysis/xcsqa)) | lm-eval | 10 | acc | 8 |
@@ -88,21 +88,21 @@ Filter any group with `group[code]`. Codes are `<ISO 639-3>_<Script>`. **Evals**
 
 | Code | Language | Evals |  | Code | Language | Evals |
 | --- | --- | --- | --- | --- | --- | --- |
-| `als_Latn` | Albanian | 7 |  | `ita_Latn` | Italian | 19 |
+| `als_Latn` | Albanian | 7 |  | `ita_Latn` | Italian | 15 |
 | `bos_Latn` | Bosnian | 5 |  | `kat_Geor` | Georgian | 7 |
 | `bul_Cyrl` | Bulgarian | 11 |  | `lit_Latn` | Lithuanian | 12 |
 | `cat_Latn` | Catalan | 8 |  | `lvs_Latn` | Latvian | 8 |
 | `ces_Latn` | Czech | 12 |  | `mkd_Cyrl` | Macedonian | 7 |
 | `dan_Latn` | Danish | 9 |  | `mlt_Latn` | Maltese | 4 |
-| `deu_Latn` | German | 20 |  | `nld_Latn` | Dutch | 14 |
+| `deu_Latn` | German | 16 |  | `nld_Latn` | Dutch | 14 |
 | `ell_Grek` | Greek | 13 |  | `nno_Latn` | Norwegian Nynorsk | 2 |
-| `eng_Latn` | English | 13 |  | `nob_Latn` | Norwegian Bokmål | 9 |
+| `eng_Latn` | English | 9 |  | `nob_Latn` | Norwegian Bokmål | 9 |
 | `est_Latn` | Estonian | 12 |  | `pol_Latn` | Polish | 13 |
-| `eus_Latn` | Basque | 7 |  | `por_Latn` | Portuguese | 18 |
+| `eus_Latn` | Basque | 7 |  | `por_Latn` | Portuguese | 14 |
 | `fin_Latn` | Finnish | 11 |  | `ron_Latn` | Romanian | 12 |
-| `fra_Latn` | French | 20 |  | `slk_Latn` | Slovak | 11 |
+| `fra_Latn` | French | 16 |  | `slk_Latn` | Slovak | 11 |
 | `gle_Latn` | Irish | 4 |  | `slv_Latn` | Slovenian | 10 |
-| `glg_Latn` | Galician | 7 |  | `spa_Latn` | Spanish | 20 |
+| `glg_Latn` | Galician | 7 |  | `spa_Latn` | Spanish | 16 |
 | `hrv_Latn` | Croatian | 10 |  | `srp_Cyrl` | Serbian | 12 |
 | `hun_Latn` | Hungarian | 13 |  | `swe_Latn` | Swedish | 12 |
 | `isl_Latn` | Icelandic | 7 |  | `tur_Latn` | Turkish | 11 |

@@ -33,7 +33,7 @@ oellm-eval collect  --results_dir <printed run directory> --output_csv results.c
 
 | Feature | How it works |
 | --- | --- |
-| **Task groups** | One name expands into many evaluations. `multilingual-oellm-eu` alone is 401. |
+| **Task groups** | One name expands into many evaluations. `multilingual-oellm-eu` alone is 377. |
 | **Offline-first** | Models and datasets are downloaded on the login node; GPU jobs never need the internet. |
 | **Cluster presets** | LUMI, Leonardo, JURECA, Jupiter and Snellius are detected automatically, with partition, account and output folder filled in. |
 | **Several harnesses** | [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) and [lighteval](https://github.com/huggingface/lighteval), plus [evalchemy](https://github.com/mlfoundations/evalchemy) for reasoning and [JudgeArena](https://github.com/OpenEuroLLM/JudgeArena) for LLM-judge benchmarks. Each task uses the right one. |
@@ -44,7 +44,7 @@ oellm-eval collect  --results_dir <printed run directory> --output_csv results.c
 
 <CardGroup cols={3}>
   <Card title="Multilingual" icon="language" href="/reference/task-groups#multilingual-groups">
-    36 European languages: FLORES, Belebele, Global-MMLU, INCLUDE, SIB-200, MultiBLIMP, PolyMath and more.
+    36 European languages: FLORES, Belebele, Global-MMLU, INCLUDE, SIB-200, MultiBLIMP, XCSQA and more.
   </Card>
 
   <Card title="English core" icon="book" href="/reference/task-groups#english-groups">
@@ -59,7 +59,7 @@ oellm-eval collect  --results_dir <printed run directory> --output_csv results.c
 ## Quick examples
 
 ```bash
-# Full multilingual suite: 401 evaluations, 36 languages
+# Full multilingual suite: 377 evaluations, 36 languages
 oellm-eval schedule --models "my-org/my-model" --task_groups "multilingual-oellm-eu"
 
 # One language across every multilingual benchmark
