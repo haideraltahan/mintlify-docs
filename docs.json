@@ -48,6 +48,7 @@
       {
         "group": "Eval analysis",
         "pages": [
+          "eval-analysis/polymath",
           "eval-analysis/sib200",
           "eval-analysis/xcsqa"
         ]
